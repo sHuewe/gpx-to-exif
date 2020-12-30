@@ -1,0 +1,13 @@
+version: '3'
+services: 
+  gpxmatcher:
+    build: 
+      context: ./.
+    image: gpxmatcher
+    container_name: gpx-to-exif
+    volumes: 
+      - ./source:/data/source
+      - ./target:/data/target
+      - ./gpxToExif:/gpxmatcher
+    #Timezon 
+    command: python script.py --timezone 0
