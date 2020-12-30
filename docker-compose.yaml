@@ -9,5 +9,5 @@ services:
       - ./source:/data/source
       - ./target:/data/target
       - ./gpxToExif:/gpxmatcher
-    #Timezon 
-    command: python script.py --timezone 0
+    #Set correct timezone here
+    command: python script.py --timezone 2

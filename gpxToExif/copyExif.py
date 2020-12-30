@@ -79,7 +79,7 @@ def createThumb(path,out):
   img.thumbnail((1000,1000))
   if out is not None:
    img.save(out)
- return ImageObject(path)
+ return ImageData(path)
 
 def getDateFromImage(image):
  return piexif.load(image.info["exif"])["Exif"][piexif.ExifIFD.DateTimeOriginal].decode()
@@ -107,7 +107,7 @@ def cloneExif(wrapperSource,wrapperTarget,forceRemoveGPS=False):
     piexif.insert(piexif.dump(tempExifData),wrapperTarget.path)
     wrapperTarget.init()
 
-class ImageObject():
+class ImageData():
     def __init__(self,path,timeZone=2):
         self.path=path
         self.timeZone=timeZone
@@ -140,7 +140,7 @@ class ImageObject():
         return "Latitude: "+latString+"\nLongitude:"+lngString
 
     def clone(self):
-        return ImageObject(self.path)
+        return ImageData(self.path)
 
     def isGpx(self):
         return self.gpx
@@ -154,7 +154,7 @@ class ImageObject():
         routePointCount=0
         for type_tag in  xmldoc.getElementsByTagName('wpt'):
             wayPointCount+=1
-            newOb= ImageObject(None)
+            newOb= ImageData(None)
             newOb.hasGPS=True
             newOb.GPSData=getPiexifGPS(float(type_tag.attributes['lat'].value),float(type_tag.attributes['lon'].value))
             newOb.time=getTimeStampFromGPX(type_tag.getElementsByTagName("time")[0].firstChild.nodeValue)
@@ -167,7 +167,7 @@ class ImageObject():
             for seg_tag in type_tag.getElementsByTagName('trkseg'):
                 for wp_tag in seg_tag.getElementsByTagName('trkpt'):
                     trackPointCount+=1
-                    newOb= ImageObject(None)
+                    newOb= ImageData(None)
                     newOb.hasGPS=True
                     newOb.GPSData=getPiexifGPS(float(wp_tag.attributes['lat'].value),float(wp_tag.attributes['lon'].value))
                     newOb.time=getTimeStampFromGPX(wp_tag.getElementsByTagName("time")[0].firstChild.nodeValue)
@@ -179,7 +179,7 @@ class ImageObject():
                 name=type_tag.getElementsByTagName("name")[0].firstChild.nodeValue
             for wp_tag in type_tag.getElementsByTagName('rtept'):
                     routePointCount+=1
-                    newOb= ImageObject(None)
+                    newOb= ImageData(None)
                     newOb.hasGPS=True
                     newOb.GPSData=getPiexifGPS(float(wp_tag.attributes['lat'].value),float(wp_tag.attributes['lon'].value))
                     newOb.time=getTimeStampFromGPX(wp_tag.getElementsByTagName("time")[0].firstChild.nodeValue)
@@ -221,7 +221,7 @@ class ExifMatcher():
     def initFolder(self,folderPath,objectList,requireGPS):
         fileList=glob.glob(folderPath+"/*")
         for filePath in fileList:
-            wrapp=ImageObject(filePath,self.timeZone)
+            wrapp=ImageData(filePath,self.timeZone)
             wrappList=[wrapp]
             if wrapp.isGpx():
                 wrappList=wrapp.getElementsFromGpx()
