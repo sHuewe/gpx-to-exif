@@ -12,3 +12,6 @@ In line 13 from docker-compose you have to provide the correct timezone. Exif da
 
 ## What about the source folder?
 The source folder should contain one or multiple gpx-files which cover the timespan from the images in the target folder. All valid gpx files according to [gpx version 1.1](https://en.wikipedia.org/wiki/GPS_Exchange_Format) are recognized. A suitable android app to provide gpx files is the [Secure GPX Tracker app](https://play.google.com/store/apps/details?id=de.shuewe.locationsaver).
+
+## Default locations
+Default locations can be defined in resources/default-locations.json. If you want to assign a default location for your data, the corresponding name has to be set in docker-compose.yaml

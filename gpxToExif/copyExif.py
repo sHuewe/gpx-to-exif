@@ -7,6 +7,7 @@ import os
 import logging
 import logging.config
 import json
+from defaultMatcher import DefaultMatcher
 
 logger=logging.getLogger()
 with open("/resources/logging.json","r") as f:
@@ -81,13 +82,6 @@ def getTimeStampFromGPX(timeField):
    return d.timestamp()#%Y-%m-%dT%H:%M:%SZ
 
 
-def createThumb(path,out):
- with Image.open(path) as img:
-  img.thumbnail((1000,1000))
-  if out is not None:
-   img.save(out)
- return ImageData(path)
-
 def getDateFromImage(image):
  return piexif.load(image.info["exif"])["Exif"][piexif.ExifIFD.DateTimeOriginal].decode()
 
@@ -105,6 +99,17 @@ def cloneExif(wrapperSource,wrapperTarget,forceRemoveGPS=False):
         tempExifData["GPS"]=wrapperSource.GPSData
     piexif.insert(piexif.dump(tempExifData),wrapperTarget.path)
     wrapperTarget.init()
+
+def setExifFromDefault(dMatcher: DefaultMatcher,dName,wrapperTarget):
+    target=Image.open(wrapperTarget.path)
+    tempExifData=piexif.load(target.info["exif"])
+    lat, lng = dMatcher.getLatLng(dName)
+    if lat is None or lng is None:
+        return
+    logger.info(f'Set default location {dName} for target {wrapperTarget.path}')
+    tempExifData["GPS"]=getPiexifGPS(float(lat),float(lng))
+    piexif.insert(piexif.dump(tempExifData),wrapperTarget.path)
+    wrapperTarget.init()   
 
 class ImageData():
     def __init__(self,path,timeZone=2):
@@ -144,7 +149,6 @@ class ImageData():
     def isGpx(self):
         return self.gpx
 
-    #TODO add other gpx types
     def getElementsFromGpx(self):
         xmldoc = minidom.parse(self.path)
         res=[]
@@ -194,7 +198,7 @@ class ExifMatcher():
     sources=[]
     targets=[]
 
-    def __init__(self,sourceFolderPath,targetFolderPath,timeZone=2):
+    def __init__(self,sourceFolderPath,targetFolderPath,timeZone=2,defaultLocation=None):
         self.timeZone=timeZone
         logger.info("Parse sources..")
         self.initFolder(sourceFolderPath,self.sources,True)
@@ -204,6 +208,8 @@ class ExifMatcher():
         logger.info("")
         logger.info("")
         self.printOverview()
+        self.defaultMatcher=DefaultMatcher()
+        self.defaultLocation=defaultLocation
 
     def printOverview(self):
 
@@ -242,7 +248,8 @@ class ExifMatcher():
                 logger.info("Best value for "+str(target.path)+": "+str(self.sources[matchedSourceIndex]))
                 cloneExif(self.sources[matchedSourceIndex],target)
             else:
-                logger.debug(f'No match found for {target.path}')
+                logger.info(f'No match found for {target.path}')
+                setExifFromDefault(self.defaultMatcher,self.defaultLocation,target)
         return
 
     def getMatchingSourceIndex(self,timeList,target):

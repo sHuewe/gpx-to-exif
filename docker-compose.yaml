@@ -10,5 +10,8 @@ services:
       - ./target:/data/target
       - ./gpxToExif:/gpxmatcher
       - ./resources:/resources
-    #Set correct timezone here
-    command: python script.py --timezone 2
+    environment: 
+      #Set correct timezone here
+      - timezone=2
+      #Set default location which is set if no location is found. Name has to be defined in default-locations.json
+      - default=home
