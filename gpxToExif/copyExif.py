@@ -4,6 +4,13 @@ import glob
 from xml.dom import minidom
 from fractions import Fraction
 import os
+import logging
+import logging.config
+import json
+
+logger=logging.getLogger()
+with open("/resources/logging.json","r") as f:
+    logging.config.dictConfig(json.load(f))
 
 def to_deg(value, loc):
     """convert decimal coordinates into degrees, munutes and seconds tuple
@@ -60,17 +67,17 @@ def getPiexifGPS(lat, lng):
 
 def getTimeStampFromImage(image,timeZone):
  d=datetime.datetime.strptime(piexif.load(image.info["exif"])["Exif"][piexif.ExifIFD.DateTimeOriginal].decode(),"%Y:%m:%d %H:%M:%S")
- print(f'Date from image: {str(d)}')
+ logger.info(f'Date from image: {str(d)}')
  return d.timestamp()-timeZone*60*60
 
 def getTimeStampFromGPX(timeField):
  try:
    d=datetime.datetime.strptime(timeField,"%Y-%m-%dT%H:%M:%SZ")
-   print(f'Date from GPX with timezone: {str(d)}')
+   logger.info(f'Date from GPX with timezone: {str(d)}')
    return d.timestamp()#%Y-%m-%dT%H:%M:%SZ
  except:
    d=datetime.datetime.strptime(timeField,"%Y-%m-%dT%H:%MZ")
-   print(f'Date from GPX: {str(d)}')
+   logger.info(f'Date from GPX: {str(d)}')
    return d.timestamp()#%Y-%m-%dT%H:%M:%SZ
 
 
@@ -88,14 +95,6 @@ def getDateFromImage(image):
 def hasGPS(image):
  return len(piexif.load(image.info["exif"])["GPS"])>0
 
-
-def match(sourceFolder,targetFolder):
- sourceList=glob.glob(sourceFolder+"/*")
- for offset in [5]:#[0,1,3,5,7,10,20,30]:
-  for sourcePath in sourceList:
-   print(f'Read ')
-   print(sourcePath)
-   copyExif(sourcePath,targetFolder,offset=offset)
 
 def cloneExif(wrapperSource,wrapperTarget,forceRemoveGPS=False):
     target=Image.open(wrapperTarget.path)
@@ -197,30 +196,31 @@ class ExifMatcher():
 
     def __init__(self,sourceFolderPath,targetFolderPath,timeZone=2):
         self.timeZone=timeZone
-        print("Parse sources..")
+        logger.info("Parse sources..")
         self.initFolder(sourceFolderPath,self.sources,True)
-        print()
-        print("Parse targets..")
+        logger.info("")
+        logger.info("Parse targets..")
         self.initFolder(targetFolderPath,self.targets,False)
-        print()
-        print()
+        logger.info("")
+        logger.info("")
         self.printOverview()
 
     def printOverview(self):
 
-        print("report:")
-        print()
-        print("sources")
+        logger.info("report:")
+        logger.info("")
+        logger.info("sources")
         for source in self.sources:
-            print(str(source.name)+" "+str(source.hasGPS)+" "+str(source.time))
-        print("")
-        print("targets")
+            logger.info(str(source.name)+" "+str(source.hasGPS)+" "+str(source.time))
+        logger.info("")
+        logger.info("targets")
         for target in self.targets:
-            print(target.path+" "+str(target.hasGPS)+" "+str(target.time))
+            logger.info(target.path+" "+str(target.hasGPS)+" "+str(target.time))
 
     def initFolder(self,folderPath,objectList,requireGPS):
         fileList=glob.glob(folderPath+"/*")
         for filePath in fileList:
+            logger.info(filePath)
             wrapp=ImageData(filePath,self.timeZone)
             wrappList=[wrapp]
             if wrapp.isGpx():
@@ -239,8 +239,10 @@ class ExifMatcher():
                 continue
             matchedSourceIndex=self.getMatchingSourceIndex(timeList,target)
             if matchedSourceIndex is not None:
-                print("Best value for "+str(target.path)+": "+str(self.sources[matchedSourceIndex]))
+                logger.info("Best value for "+str(target.path)+": "+str(self.sources[matchedSourceIndex]))
                 cloneExif(self.sources[matchedSourceIndex],target)
+            else:
+                logger.debug(f'No match found for {target.path}')
         return
 
     def getMatchingSourceIndex(self,timeList,target):
@@ -253,15 +255,3 @@ class ExifMatcher():
         if minDelta>2*60*60:
             return None
         return minSourceIndex
-
-    def match(self):
-        for source in self.sources:
-            for target in self.targets:
-                if target.hasGPS:
-                    continue
-                if abs(source.time - target.time)<3:
-                    cloneExif(source,target)
-                    target.hasGPS=True
-                    print("Cloned from "+source.path+" to "+target.path)
-                else:
-                    print(f'{source.time} {target.time}')
